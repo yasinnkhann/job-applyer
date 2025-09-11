@@ -2,6 +2,7 @@ import os
 import csv
 from dotenv import load_dotenv
 import google.generativeai as genai
+import PyPDF2
 
 # -------------------- Load Environment --------------------
 load_dotenv()
@@ -10,7 +11,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found in environment.")
 
-# Configure Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
 gmodel = genai.GenerativeModel("gemini-2.0-flash")
 
@@ -26,8 +26,25 @@ APPLICANT = {
 }
 
 # -------------------- File Paths --------------------
-JOB_LIST_CSV = "jobs_to_apply.csv"  # Input CSV
-OUTPUT_CSV = "ai_answers.csv"  # Output CSV with AI answers
+JOB_LIST_CSV = "jobs_to_apply.csv"
+OUTPUT_CSV = "ai_answers.csv"
+
+
+# -------------------- PDF Resume Reader (PyPDF2) --------------------
+def extract_resume_text(path):
+    if not path or not os.path.exists(path):
+        return ""
+    text = ""
+    with open(path, "rb") as f:
+        reader = PyPDF2.PdfReader(f)
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    return text.strip()
+
+
+RESUME_TEXT = extract_resume_text(APPLICANT["resume_path"])
 
 
 # -------------------- AI Answer Generator --------------------
@@ -35,7 +52,7 @@ def generate_batch_ai_answers(job_description: str, questions: list):
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
 
     prompt = f"""
-Here is my profile:
+Here is my profile and resume:
 - Name: {APPLICANT['name']}
 - Email: {APPLICANT['email']}
 - Phone: {APPLICANT['phone']}
@@ -43,13 +60,17 @@ Here is my profile:
 - GitHub: {APPLICANT.get('github', '')}
 - Portfolio: {APPLICANT.get('portfolio', '')}
 
+Resume Content:
+{RESUME_TEXT}
+
 Job description:
 {job_description}
 
-Here are the application questions:
+Application questions:
 {question_text}
 
-Draft concise, natural answers (2-3 sentences) for each question.
+Draft concise, natural answers (2-3 sentences) for each question,
+tailored to my resume and experience.
 Return them in the same numbered format.
 """
     # Call Gemini AI
@@ -83,7 +104,6 @@ Return them in the same numbered format.
 def write_answers_to_csv(jobs, output_file):
     with open(output_file, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        # Header: company, job title, job URL, question1, answer1, question2, answer2...
         max_questions = max(len(job["Questions"]) for job in jobs)
         header = ["Company", "Job Title", "Job URL"]
         for i in range(max_questions):
@@ -101,7 +121,6 @@ def write_answers_to_csv(jobs, output_file):
 
 # -------------------- Main --------------------
 def main():
-    # Read jobs from CSV
     jobs = []
     with open(JOB_LIST_CSV, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
