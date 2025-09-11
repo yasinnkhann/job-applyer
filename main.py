@@ -1,156 +1,134 @@
-import asyncio
-import csv
-from datetime import datetime
-from playwright.async_api import async_playwright
 import os
-import google.generativeai as genai
+import csv
 from dotenv import load_dotenv
-import aiofiles
+import google.generativeai as genai
 
-
-# -------------------- Configuration --------------------
+# -------------------- Load Environment --------------------
 load_dotenv()
-gemini_api_key = os.environ.get("GEMINI_API_KEY")
-if not gemini_api_key:
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found in environment.")
-genai.configure(api_key=gemini_api_key)
+
+# Configure Gemini API
+genai.configure(api_key=GEMINI_API_KEY)
 gmodel = genai.GenerativeModel("gemini-2.0-flash")
 
+# -------------------- Applicant Info --------------------
+APPLICANT = {
+    "name": os.getenv("FULL_NAME"),
+    "email": os.getenv("EMAIL"),
+    "phone": os.getenv("PHONE"),
+    "resume_path": os.getenv("RESUME_PATH"),
+    "linkedin": os.getenv("LINKEDIN_URL"),
+    "github": os.getenv("GITHUB_URL"),
+    "portfolio": os.getenv("PORTFOLIO_URL"),
+}
 
-APPLICATION_LOG = "applications_log.csv"
-JOB_LIST_CSV = "jobs_to_apply.csv"
+# -------------------- File Paths --------------------
+JOB_LIST_CSV = "jobs_to_apply.csv"  # Input CSV
+OUTPUT_CSV = "ai_answers.csv"  # Output CSV with AI answers
 
 
 # -------------------- AI Answer Generator --------------------
 def generate_batch_ai_answers(job_description: str, questions: list):
-    """
-    Generate AI draft answers for multiple questions at once.
-    """
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+
     prompt = f"""
-    Here is my resume summary:
-    - Software engineer with 3 years experience in Python, React, and cloud systems.
-    - Built scalable APIs, automated workflows, and improved reliability at scale.
+Here is my profile:
+- Name: {APPLICANT['name']}
+- Email: {APPLICANT['email']}
+- Phone: {APPLICANT['phone']}
+- LinkedIn: {APPLICANT.get('linkedin', '')}
+- GitHub: {APPLICANT.get('github', '')}
+- Portfolio: {APPLICANT.get('portfolio', '')}
 
-    Job description:
-    {job_description}
+Job description:
+{job_description}
 
-    Here are the application questions that need answers:
-    {question_text}
+Here are the application questions:
+{question_text}
 
-    Draft concise, natural answers (2-3 sentences) for each question.
-    Return them in the same numbered format.
-    """
+Draft concise, natural answers (2-3 sentences) for each question.
+Return them in the same numbered format.
+"""
+    # Call Gemini AI
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
+
+    # Parse numbered answers robustly
     answers = {}
-    for line in output.split("\n"):
-        if line.strip() and line[0].isdigit() and "." in line:
-            idx, ans = line.split(".", 1)
-            answers[int(idx) - 1] = ans.strip()
+    current_idx = None
+    buffer = []
+
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line[0].isdigit() and "." in line:
+            if current_idx is not None:
+                answers[current_idx] = " ".join(buffer).strip()
+            current_idx = int(line.split(".")[0]) - 1
+            buffer = [".".join(line.split(".")[1:]).strip()]
+        else:
+            if current_idx is not None:
+                buffer.append(line)
+    if current_idx is not None:
+        answers[current_idx] = " ".join(buffer).strip()
+
     return answers
 
 
-# -------------------- CSV Logging --------------------
-async def log_application(company: str, job_title: str, job_url: str):
-    date_applied = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    async with aiofiles.open(
-        APPLICATION_LOG, mode="a", newline="", encoding="utf-8"
-    ) as file:
-        writer = csv.writer(await file.__aenter__())
-        await asyncio.to_thread(
-            writer.writerow, [date_applied, company, job_title, job_url]
-        )
-
-
-# -------------------- Apply to Single Job --------------------
-async def apply_to_job(
-    page, company: str, job_title: str, job_url: str, job_description: str
-):
-    await page.goto(job_url)
-
-    # Autofill basic info (update selectors per site)
-    await page.fill('input[name="name"]', APPLICANT["name"])
-    await page.fill('input[name="email"]', APPLICANT["email"])
-    await page.fill('input[name="phone"]', APPLICANT["phone"])
-    await page.set_input_files('input[type="file"]', APPLICANT["resume_path"])
-
-    # Detect empty text questions
-    questions_elements = await page.query_selector_all("textarea, input[type='text']")
-    empty_questions = []
-    element_mapping = []
-
-    for q in questions_elements:
-        value = await q.input_value()
-        if not value.strip():  # Only empty fields
-            label = await q.get_attribute("aria-label") or "Why do you want this role?"
-            empty_questions.append(label)
-            element_mapping.append(q)
-
-    if empty_questions:
-        print(
-            f"\nFound {len(empty_questions)} empty questions. Generating AI answers..."
-        )
-        answers = await generate_batch_ai_answers(job_description, empty_questions)
-
-        # Review and edit all answers in one go
-        final_answers = []
-        for idx, question_text in enumerate(empty_questions):
-            ai_answer = answers.get(idx, "")
-            print(f"\nQuestion: {question_text}\nSuggested answer:\n{ai_answer}\n")
-            user_input = await asyncio.to_thread(
-                input, "Edit answer or press Enter to use as-is: "
-            )
-            final_answers.append(
-                user_input.strip() if user_input.strip() else ai_answer
-            )
-
-        # Fill answers into fields
-        for q_elem, ans in zip(element_mapping, final_answers):
-            await q_elem.fill(ans)
-    else:
-        print("\nNo empty questions detected.")
-
-    # Log application
-    await log_application(company, job_title, job_url)
-    print(f"\n✅ {company} - {job_title} logged. Review before submitting.\n")
-    await page.pause()  # Manual review/submit
-
-
-# -------------------- Main Loop --------------------
-async def main():
-    # Ensure log CSV has headers
-    if not os.path.exists(APPLICATION_LOG):
-        async with aiofiles.open(
-            APPLICATION_LOG, mode="w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.writer(await file.__aenter__())
-            await asyncio.to_thread(
-                writer.writerow, ["Date Applied", "Company", "Job Title", "Job URL"]
-            )
-
-    # Read jobs from CSV
-    jobs = []
-    async with aiofiles.open(JOB_LIST_CSV, newline="", encoding="utf-8") as file:
-        reader = csv.DictReader(await file.__aenter__())
-        jobs = await asyncio.to_thread(list, reader)
-
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        page = await browser.new_page()
+# -------------------- CSV Output --------------------
+def write_answers_to_csv(jobs, output_file):
+    with open(output_file, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        # Header: company, job title, job URL, question1, answer1, question2, answer2...
+        max_questions = max(len(job["Questions"]) for job in jobs)
+        header = ["Company", "Job Title", "Job URL"]
+        for i in range(max_questions):
+            header.append(f"Question {i+1}")
+            header.append(f"Answer {i+1}")
+        writer.writerow(header)
 
         for job in jobs:
-            print(
-                f"\n🚀 Starting application for {job['Company']} - {job['Job Title']}"
+            row = [job["Company"], job["Job Title"], job["Job URL"]]
+            for q, a in zip(job["Questions"], job["Answers"]):
+                row.append(q)
+                row.append(a)
+            writer.writerow(row)
+
+
+# -------------------- Main --------------------
+def main():
+    # Read jobs from CSV
+    jobs = []
+    with open(JOB_LIST_CSV, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            job_description = row.get("Job Description", "")
+            raw_questions = row.get("Questions", "")
+            questions = [q.strip() for q in raw_questions.split("|") if q.strip()]
+
+            if questions:
+                answers_dict = generate_batch_ai_answers(job_description, questions)
+                answers = [answers_dict.get(i, "") for i in range(len(questions))]
+            else:
+                answers = []
+
+            jobs.append(
+                {
+                    "Company": row.get("Company", ""),
+                    "Job Title": row.get("Job Title", ""),
+                    "Job URL": row.get("Job URL", ""),
+                    "Questions": questions,
+                    "Answers": answers,
+                }
             )
-            await apply_to_job(
-                page,
-                company=job["Company"],
-                job_title=job["Job Title"],
-                job_url=job["Job URL"],
-                job_description=job["Job Description"],
-            )
+
+    write_answers_to_csv(jobs, OUTPUT_CSV)
+    print(f"\n✅ AI-generated answers saved to {OUTPUT_CSV}. Ready for copy-paste!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
