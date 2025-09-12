@@ -59,6 +59,9 @@ def generate_batch_ai_answers(job_description: str, questions: list, company: st
     """
     Generates AI answers for a list of application questions,
     tailored to the applicant's resume and the specific company.
+    Make sure they are complete, professional, non AI, and ready-to-send answers.
+    I don't want to see any placeholders like [Your Name] or [Company].
+    No dashes.
     """
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
 
@@ -82,7 +85,7 @@ Company: {company}
 Application questions:
 {question_text}
 
-Draft concise, natural answers (3-4 sentences each) for each question,
+Draft concise, natural answers (4-5 sentences each) for each question,
 tailored to my resume, experience, and the specific company.
 Make the answers reflect why I am interested in this company and position.
 Return them in the same numbered format.
@@ -252,7 +255,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
 
     # cover_letter = generate_cover_letter(
     #     """
@@ -263,13 +266,13 @@ if __name__ == "__main__":
     # )
     # print(cover_letter)
 
-    # answers = generate_batch_ai_answers(
-    #     """
+    answers = generate_batch_ai_answers(
+        """
+            employee engagement, and talent development. I am particularly drawn to Mandeva HR's innovative approach to leveraging technology to enhance HR processes and improve employee experiences. The company's commitment to fostering a positive workplace culture and its focus on continuous improvement align with my professional values and aspirations. I am excited about the opportunity to contribute to Mandeva HR's mission and help drive impactful HR initiatives that support both employees and organizational goals.
 
-    #     Wirechunk is a website platform and CMS where AI runs through every layer. It’s fast, modern, and extensible, letting developers build any site or app. We’re building the platform for the next 100 million sites.
 
-    #                           """,
-    #     ["What interests you about working for this company?"],
-    #     "Wirechunk",
-    # )
-    # print(list(answers.values())[0])
+                              """,
+        ["What interests you about working for this company?"],
+        "Mandeva HR",
+    )
+    print(list(answers.values())[0])
