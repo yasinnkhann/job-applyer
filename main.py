@@ -29,7 +29,7 @@ APPLICANT = {
 }
 
 # -------------------- File Paths --------------------
-JOB_LIST_JSON = "input.json"
+JOB_LIST_JSON = "jobs_to_apply.json"
 OUTPUT_JSON = "output.json"
 COVER_LETTER_PDFS_DIR = "cover_letters"
 
@@ -79,6 +79,7 @@ Return them in the same numbered format.
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
 
+    # Build dictionary of answers
     answers = {}
     current_idx = None
     buffer = []
@@ -127,11 +128,7 @@ Guidelines:
 
 # -------------------- Save Job PDF --------------------
 def save_job_pdf(
-    company: str,
-    job_title: str,
-    questions: list,
-    answers: list,
-    cover_letter: str = None,
+    company: str, job_title: str, qa_pairs: list, cover_letter: str = None
 ):
     if not os.path.exists(COVER_LETTER_PDFS_DIR):
         os.makedirs(COVER_LETTER_PDFS_DIR)
@@ -157,9 +154,9 @@ def save_job_pdf(
         textobject.textLine("")
 
     # Questions & Answers
-    for q, a in zip(questions, answers):
-        textobject.textLine(f"Q: {q}")
-        textobject.textLine(f"A: {a}")
+    for qa in qa_pairs:
+        textobject.textLine(f"Q: {qa['question']}")
+        textobject.textLine(f"A: {qa['answer']}")
         textobject.textLine("")
 
     c.drawText(textobject)
@@ -182,20 +179,19 @@ def main():
 
         if questions:
             answers_dict = generate_batch_ai_answers(job_description, questions)
-            answers = [answers_dict.get(i, "") for i in range(len(questions))]
+            qa_pairs = [
+                {"question": q, "answer": answers_dict.get(i, "")}
+                for i, q in enumerate(questions)
+            ]
         else:
-            answers = []
+            qa_pairs = []
 
         cover_letter = generate_cover_letter(
             job_description, row.get("Company", ""), row.get("Job Title", "")
         )
 
         save_job_pdf(
-            row.get("Company", ""),
-            row.get("Job Title", ""),
-            questions,
-            answers,
-            cover_letter,
+            row.get("Company", ""), row.get("Job Title", ""), qa_pairs, cover_letter
         )
 
         all_jobs.append(
@@ -203,8 +199,7 @@ def main():
                 "Company": row.get("Company", ""),
                 "Job Title": row.get("Job Title", ""),
                 "Job URL": row.get("Job URL", ""),
-                "Questions": questions,
-                "Answers": answers,
+                "Questions": qa_pairs,
                 "CoverLetter": cover_letter,
             }
         )
