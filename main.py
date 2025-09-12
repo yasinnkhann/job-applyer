@@ -1,5 +1,5 @@
 import os
-import csv
+import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 import PyPDF2
@@ -29,9 +29,9 @@ APPLICANT = {
 }
 
 # -------------------- File Paths --------------------
-JOB_LIST_CSV = "jobs_to_apply.csv"
-OUTPUT_CSV = "ai_answers.csv"
-COVER_LETTERS_DIR = "cover_letters"
+JOB_LIST_JSON = "input.json"
+OUTPUT_JSON = "output.json"
+COVER_LETTER_PDFS_DIR = "cover_letters"
 
 
 # -------------------- PDF Resume Reader (PyPDF2) --------------------
@@ -54,7 +54,6 @@ RESUME_TEXT = extract_resume_text(APPLICANT["resume_path"])
 # -------------------- AI Answer Generator --------------------
 def generate_batch_ai_answers(job_description: str, questions: list):
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
-
     prompt = f"""
 Here is my profile and resume:
 - Name: {APPLICANT['name']}
@@ -80,11 +79,9 @@ Return them in the same numbered format.
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
 
-    # Parse numbered answers robustly
     answers = {}
     current_idx = None
     buffer = []
-
     for line in output.splitlines():
         line = line.strip()
         if not line:
@@ -99,7 +96,6 @@ Return them in the same numbered format.
                 buffer.append(line)
     if current_idx is not None:
         answers[current_idx] = " ".join(buffer).strip()
-
     return answers
 
 
@@ -129,13 +125,19 @@ Guidelines:
     return response.text.strip()
 
 
-# -------------------- Save Cover Letter as PDF (ReportLab) --------------------
-def save_cover_letter_pdf_reportlab(company: str, job_title: str, cover_letter: str):
-    if not os.path.exists(COVER_LETTERS_DIR):
-        os.makedirs(COVER_LETTERS_DIR)
+# -------------------- Save Job PDF --------------------
+def save_job_pdf(
+    company: str,
+    job_title: str,
+    questions: list,
+    answers: list,
+    cover_letter: str = None,
+):
+    if not os.path.exists(COVER_LETTER_PDFS_DIR):
+        os.makedirs(COVER_LETTER_PDFS_DIR)
 
-    filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
-    filepath = os.path.join(COVER_LETTERS_DIR, filename)
+    filename = f"{company}_{job_title}_Application.pdf".replace(" ", "_")
+    filepath = os.path.join(COVER_LETTER_PDFS_DIR, filename)
 
     c = canvas.Canvas(filepath, pagesize=LETTER)
     width, height = LETTER
@@ -144,73 +146,75 @@ def save_cover_letter_pdf_reportlab(company: str, job_title: str, cover_letter: 
     textobject.setTextOrigin(margin, height - margin)
     textobject.setFont("Helvetica", 12)
 
-    # Add the cover letter text
-    for line in cover_letter.split("\n"):
-        textobject.textLine(line)
+    # Optional cover letter first
+    if cover_letter:
+        textobject.textLine("Cover Letter:")
+        textobject.textLine("")
+        for line in cover_letter.split("\n"):
+            textobject.textLine(line)
+        textobject.textLine("")
+        textobject.textLine("-" * 70)
+        textobject.textLine("")
+
+    # Questions & Answers
+    for q, a in zip(questions, answers):
+        textobject.textLine(f"Q: {q}")
+        textobject.textLine(f"A: {a}")
+        textobject.textLine("")
 
     c.drawText(textobject)
     c.showPage()
     c.save()
-
-    print(f"📄 Saved cover letter PDF: {filepath}")
-
-
-# -------------------- CSV Output --------------------
-def write_answers_to_csv(jobs, output_file):
-    with open(output_file, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        max_questions = max(len(job["Questions"]) for job in jobs)
-        header = ["Company", "Job Title", "Job URL"]
-        for i in range(max_questions):
-            header.append(f"Question {i+1}")
-            header.append(f"Answer {i+1}")
-        writer.writerow(header)
-
-        for job in jobs:
-            row = [job["Company"], job["Job Title"], job["Job URL"]]
-            for q, a in zip(job["Questions"], job["Answers"]):
-                row.append(q)
-                row.append(a)
-            writer.writerow(row)
+    print(f"📄 Saved job application PDF: {filepath}")
 
 
 # -------------------- Main --------------------
 def main():
-    jobs = []
-    with open(JOB_LIST_CSV, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            job_description = row.get("Job Description", "")
-            raw_questions = row.get("Questions", "")
-            questions = [q.strip() for q in raw_questions.split("|") if q.strip()]
+    all_jobs = []
 
-            if questions:
-                answers_dict = generate_batch_ai_answers(job_description, questions)
-                answers = [answers_dict.get(i, "") for i in range(len(questions))]
-            else:
-                answers = []
+    # Load jobs from JSON
+    with open(JOB_LIST_JSON, "r", encoding="utf-8") as f:
+        jobs_data = json.load(f)
 
-            cover_letter = generate_cover_letter(
-                job_description, row.get("Company", ""), row.get("Job Title", "")
-            )
+    for row in jobs_data:
+        job_description = row.get("Job Description", "")
+        questions = row.get("Questions", [])
 
-            save_cover_letter_pdf_reportlab(
-                row.get("Company", ""), row.get("Job Title", ""), cover_letter
-            )
+        if questions:
+            answers_dict = generate_batch_ai_answers(job_description, questions)
+            answers = [answers_dict.get(i, "") for i in range(len(questions))]
+        else:
+            answers = []
 
-            jobs.append(
-                {
-                    "Company": row.get("Company", ""),
-                    "Job Title": row.get("Job Title", ""),
-                    "Job URL": row.get("Job URL", ""),
-                    "Questions": questions,
-                    "Answers": answers,
-                }
-            )
+        cover_letter = generate_cover_letter(
+            job_description, row.get("Company", ""), row.get("Job Title", "")
+        )
 
-    write_answers_to_csv(jobs, OUTPUT_CSV)
-    print(f"\n✅ AI-generated answers saved to {OUTPUT_CSV}")
-    print(f"✅ Individual cover letters saved as PDFs in folder: {COVER_LETTERS_DIR}")
+        save_job_pdf(
+            row.get("Company", ""),
+            row.get("Job Title", ""),
+            questions,
+            answers,
+            cover_letter,
+        )
+
+        all_jobs.append(
+            {
+                "Company": row.get("Company", ""),
+                "Job Title": row.get("Job Title", ""),
+                "Job URL": row.get("Job URL", ""),
+                "Questions": questions,
+                "Answers": answers,
+                "CoverLetter": cover_letter,
+            }
+        )
+
+    # Save structured JSON output
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(all_jobs, f, ensure_ascii=False, indent=2)
+
+    print(f"\n✅ All AI answers saved to {OUTPUT_JSON}")
+    print(f"✅ Individual PDFs saved in folder: {COVER_LETTER_PDFS_DIR}")
 
 
 if __name__ == "__main__":
