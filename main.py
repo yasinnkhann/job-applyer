@@ -59,9 +59,6 @@ def generate_batch_ai_answers(job_description: str, questions: list, company: st
     """
     Generates AI answers for a list of application questions,
     tailored to the applicant's resume and the specific company.
-    Make sure they are complete, professional, non AI, and ready-to-send answers.
-    I don't want to see any placeholders like [Your Name] or [Company].
-    No dashes.
     """
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
 
@@ -89,6 +86,9 @@ Draft concise, natural answers (4-5 sentences each) for each question,
 tailored to my resume, experience, and the specific company.
 Make the answers reflect why I am interested in this company and position.
 Return them in the same numbered format.
+Make sure they are complete, professional, non AI, and ready-to-send answers.
+I don't want to see any placeholders like [Your Name] or [Company].
+No dashes.
 """
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
@@ -268,11 +268,45 @@ if __name__ == "__main__":
 
     answers = generate_batch_ai_answers(
         """
-            employee engagement, and talent development. I am particularly drawn to Mandeva HR's innovative approach to leveraging technology to enhance HR processes and improve employee experiences. The company's commitment to fostering a positive workplace culture and its focus on continuous improvement align with my professional values and aspirations. I am excited about the opportunity to contribute to Mandeva HR's mission and help drive impactful HR initiatives that support both employees and organizational goals.
+          Mission
+
+Finch was started by 2 friends (Nino & Steph 🙇🏾‍♂️🙇🏻‍♀️) who struggled with anxiety and depression and found self-care challenging to stick with. We decided to build Finch hoping to make self-care fun and accessible after seeing many others share similar struggles. Finch was launched in 2021, and our team is grateful to have helped over 20 million people on their mental health journeys.
+
+Finch is profitable and we believe in responsible growth. We are a small but mighty team who are passionate about mental health.
+
+Role Summary
+
+Finch has unique product engineering opportunities as it straddles the line between wellness and gaming, and our product challenges reflect that. We’re passionate about making self-care feel easy and fun for everyone, and strive to design playful, delightful experiences we hope users will love. If those sorts of creative challenges are interesting to you, read on!
+
+Key Responsibilities
+
+You will play a critical role in growing and evolving our app as our 5th engineer.
+You will work with high autonomy and speed, and be involved in the end-to-end product development cycle from ideation to launch decisions.
+You will have significant input into the norms and tools we use in order to create a high performing engineering team.
+You will work cross-functionally with product designers, creative designers, character animators, and the founders.
+You will be a thought partner in building a product, company, and culture we are proud of.
+Projects You Could Work On
+
+How can we revolutionize the way people interact with their mobile devices to be mentally beneficial instead of mentally degrading?
+How can we redefine social interactions that can help people support others in a way that no other product can?
+How can we reimagine wellness exercises like CBT, mental health insights, and more to help people navigate the ups and downs in their lives?
+How can we create playful product experiences that can make daily self care and mental health fun and sustainably engaging?
+How can we create a generalizable platform of mental health tools that can cater to a wide range of experiences, from people still figuring out their self care routines to others who know exactly what they need to do?
+Requirements
+
+You have 5+ years experience building consumer products for mobile or full-stack environments.
+You have a product-centric mindset and take pride in building experiences people love to use. You naturally identify tradeoffs for any product decision to inform opinions about user experience.
+You can quickly derisk new ideas ranging from quick iterative changes to developing completely new product experiences. You move with a strong sense of urgency and can-do attitude in a fast-paced environment.
+You have experience designing clean and maintainable APIs.
+You’ve run many A/B experiments and can make data-informed decisions while balancing qualitative feedback.
+You are familiar with best practices in engineering for mobile apps and web and can help build scalable and reliable products.
+You enjoy disentangling ambiguous and messy problems into simple and elegant solutions.
+You can work at least 6 hours within our coordination hours (8am PST - 6pm PST)
+Nice to haves: Experience developing Flutter mobile apps. Experience working on products in the wellness or game industry.
 
 
                               """,
         ["What interests you about working for this company?"],
-        "Mandeva HR",
+        "Finch Care",
     )
     print(list(answers.values())[0])
