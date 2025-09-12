@@ -3,10 +3,11 @@ import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 import PyPDF2
-from reportlab.lib.pagesizes import LETTER
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import inch
 from datetime import datetime
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.units import inch
 
 # -------------------- Load Environment --------------------
 load_dotenv()
@@ -33,9 +34,10 @@ APPLICANT = {
 JOB_LIST_JSON = "jobs_to_apply.json"
 OUTPUT_JSON = "output.json"
 COVER_LETTER_PDFS_DIR = "cover_letters"
+QA_PDFS_DIR = "qa_pdfs"
 
 
-# -------------------- PDF Resume Reader (PyPDF2) --------------------
+# -------------------- Resume Extraction --------------------
 def extract_resume_text(path):
     if not path or not os.path.exists(path):
         return ""
@@ -104,17 +106,16 @@ Return them in the same numbered format.
 # -------------------- Cover Letter Generator --------------------
 def generate_cover_letter(job_description: str, company: str, job_title: str):
     prompt = f"""
-Write a full professional cover letter in the following format:
+You are an expert career coach. Write a **complete, professional, ready-to-send cover letter** for {APPLICANT['name']} applying to the position of {job_title} at {company}.
+Use the resume below to highlight relevant skills, experience, and measurable achievements.
+The cover letter must:
 
-Dear {company} Hiring Team,
-
-Write a tailored cover letter for the position of {job_title} at {company} using my experience and resume below. Include:
-
-- Why I am excited about this company and role.
-- Specific projects and achievements with measurable results.
-- Relevant skills and technologies (Python, React, Node.js, PostgreSQL, MongoDB, AWS, Docker, testing frameworks, etc.).
-- Natural, professional, human tone, not generic or robotic.
-- Conclude with a thank-you paragraph and professional closing.
+- Be fully polished and natural.
+- Do NOT include any placeholders like [Your Name], [Date], [Company Address], or [Platform].
+- Use {APPLICANT['name']}’s real name, but omit address, phone, or email headers.
+- Explain why the applicant is excited about this company and role.
+- Include relevant technical skills (Python, React, Node.js, PostgreSQL, MongoDB, AWS, Docker, testing frameworks, etc.).
+- Be concise, tailored to the applicant's experience, and ready to send.
 
 Resume content:
 {RESUME_TEXT}
@@ -122,49 +123,71 @@ Resume content:
 Job description:
 {job_description}
 
-Cover letter:
+Write the final cover letter directly, starting with:
+"Dear {company} Hiring Team," and ending with a professional closing including the applicant's name.
 """
     response = gmodel.generate_content(prompt)
     return response.text.strip()
 
 
-# -------------------- Save Job PDF --------------------
-def save_job_pdf(
-    company: str, job_title: str, qa_pairs: list, cover_letter: str = None
-):
+# -------------------- PDF Helpers --------------------
+def save_paragraph_pdf(filepath, title, paragraphs):
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.pagesizes import LETTER
+    from reportlab.lib.units import inch
+
+    doc = SimpleDocTemplate(
+        filepath,
+        pagesize=LETTER,
+        rightMargin=0.75 * inch,
+        leftMargin=0.75 * inch,
+        topMargin=0.75 * inch,
+        bottomMargin=0.75 * inch,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    if title:
+        story.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        story.append(Spacer(1, 0.2 * inch))
+
+    for para in paragraphs:
+        para = para.replace("\n", "<br/>")
+        story.append(Paragraph(para, styles["Normal"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+    doc.build(story)
+
+
+# -------------------- Save Cover Letter PDF --------------------
+def save_cover_letter_pdf(company: str, job_title: str, cover_letter: str):
     if not os.path.exists(COVER_LETTER_PDFS_DIR):
         os.makedirs(COVER_LETTER_PDFS_DIR)
 
-    filename = f"{company}_{job_title}_Application.pdf".replace(" ", "_")
+    filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
     filepath = os.path.join(COVER_LETTER_PDFS_DIR, filename)
+    paragraphs = cover_letter.split("\n\n")  # Split into paragraphs
+    save_paragraph_pdf(filepath, f"Cover Letter: {company} - {job_title}", paragraphs)
+    print(f"📄 Saved cover letter PDF: {filepath}")
 
-    c = canvas.Canvas(filepath, pagesize=LETTER)
-    width, height = LETTER
-    margin = 0.75 * inch
-    textobject = c.beginText()
-    textobject.setTextOrigin(margin, height - margin)
-    textobject.setFont("Helvetica", 12)
 
-    # Optional cover letter first
-    if cover_letter:
-        textobject.textLine("Cover Letter:")
-        textobject.textLine("")
-        for line in cover_letter.split("\n"):
-            textobject.textLine(line)
-        textobject.textLine("")
-        textobject.textLine("-" * 70)
-        textobject.textLine("")
+# -------------------- Save Q&A PDF --------------------
+def save_qa_pdf(company: str, job_title: str, qa_pairs: list):
+    if not os.path.exists(QA_PDFS_DIR):
+        os.makedirs(QA_PDFS_DIR)
 
-    # Questions & Answers
+    filename = f"{company}_{job_title}_QA.pdf".replace(" ", "_")
+    filepath = os.path.join(QA_PDFS_DIR, filename)
+
+    paragraphs = []
     for qa in qa_pairs:
-        textobject.textLine(f"Q: {qa['question']}")
-        textobject.textLine(f"A: {qa['answer']}")
-        textobject.textLine("")
+        paragraphs.append(f"<b>Q:</b> {qa['question']}")
+        paragraphs.append(f"<b>A:</b> {qa['answer']}")
+        paragraphs.append("")  # extra spacing
 
-    c.drawText(textobject)
-    c.showPage()
-    c.save()
-    print(f"📄 Saved job application PDF: {filepath}")
+    save_paragraph_pdf(filepath, f"Q&A: {company} - {job_title}", paragraphs)
+    print(f"📄 Saved Q&A PDF: {filepath}")
 
 
 # -------------------- Main --------------------
@@ -192,9 +215,11 @@ def main():
             job_description, row.get("Company", ""), row.get("Job Title", "")
         )
 
-        save_job_pdf(
-            row.get("Company", ""), row.get("Job Title", ""), qa_pairs, cover_letter
+        save_cover_letter_pdf(
+            row.get("Company", ""), row.get("Job Title", ""), cover_letter
         )
+        if qa_pairs:
+            save_qa_pdf(row.get("Company", ""), row.get("Job Title", ""), qa_pairs)
 
         all_jobs.append(
             {
@@ -211,7 +236,8 @@ def main():
         json.dump(all_jobs, f, ensure_ascii=False, indent=2)
 
     print(f"\n✅ All AI answers saved to {OUTPUT_JSON}")
-    print(f"✅ Individual PDFs saved in folder: {COVER_LETTER_PDFS_DIR}")
+    print(f"✅ Cover letters saved in folder: {COVER_LETTER_PDFS_DIR}")
+    print(f"✅ Q&A PDFs saved in folder: {QA_PDFS_DIR}")
 
 
 if __name__ == "__main__":
