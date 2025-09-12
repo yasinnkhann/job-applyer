@@ -3,6 +3,8 @@ import csv
 from dotenv import load_dotenv
 import google.generativeai as genai
 import PyPDF2
+from docx import Document
+
 
 # -------------------- Load Environment --------------------
 load_dotenv()
@@ -28,6 +30,7 @@ APPLICANT = {
 # -------------------- File Paths --------------------
 JOB_LIST_CSV = "jobs_to_apply.csv"
 OUTPUT_CSV = "ai_answers.csv"
+COVER_LETTERS_DIR = "cover_letters"
 
 
 # -------------------- PDF Resume Reader (PyPDF2) --------------------
@@ -73,7 +76,6 @@ Draft concise, natural answers (2-3 sentences) for each question,
 tailored to my resume and experience.
 Return them in the same numbered format.
 """
-    # Call Gemini AI
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
 
@@ -98,6 +100,46 @@ Return them in the same numbered format.
         answers[current_idx] = " ".join(buffer).strip()
 
     return answers
+
+
+# -------------------- Cover Letter Generator --------------------
+def generate_cover_letter(job_description: str, company: str, job_title: str):
+    prompt = f"""
+Here is my profile and resume:
+- Name: {APPLICANT['name']}
+- LinkedIn: {APPLICANT.get('linkedin', '')}
+- GitHub: {APPLICANT.get('github', '')}
+- Portfolio: {APPLICANT.get('portfolio', '')}
+
+Resume Content:
+{RESUME_TEXT}
+
+Now, write a concise, professional cover letter tailored for:
+- Company: {company}
+- Role: {job_title}
+- Job Description: {job_description}
+
+Guidelines:
+- Max one page.
+- Natural tone, not too formal or robotic.
+- Highlight relevant skills and alignment with the role.
+"""
+    response = gmodel.generate_content(prompt)
+    return response.text.strip()
+
+
+# -------------------- Save Cover Letter as DOCX --------------------
+def save_cover_letter_docx(company: str, job_title: str, cover_letter: str):
+    if not os.path.exists(COVER_LETTERS_DIR):
+        os.makedirs(COVER_LETTERS_DIR)
+
+    filename = f"{company}_{job_title}_CoverLetter.docx".replace(" ", "_")
+    filepath = os.path.join(COVER_LETTERS_DIR, filename)
+
+    doc = Document()
+    doc.add_paragraph(cover_letter)
+    doc.save(filepath)
+    print(f"📄 Saved cover letter: {filepath}")
 
 
 # -------------------- CSV Output --------------------
@@ -135,6 +177,14 @@ def main():
             else:
                 answers = []
 
+            cover_letter = generate_cover_letter(
+                job_description, row.get("Company", ""), row.get("Job Title", "")
+            )
+
+            save_cover_letter_docx(
+                row.get("Company", ""), row.get("Job Title", ""), cover_letter
+            )
+
             jobs.append(
                 {
                     "Company": row.get("Company", ""),
@@ -146,7 +196,8 @@ def main():
             )
 
     write_answers_to_csv(jobs, OUTPUT_CSV)
-    print(f"\n✅ AI-generated answers saved to {OUTPUT_CSV}. Ready for copy-paste!")
+    print(f"\n✅ AI-generated answers saved to {OUTPUT_CSV}")
+    print(f"✅ Individual cover letters saved in folder: {COVER_LETTERS_DIR}")
 
 
 if __name__ == "__main__":
