@@ -75,7 +75,7 @@ Job description:
 Application questions:
 {question_text}
 
-Draft concise, natural answers (2-3 sentences) for each question,
+Draft concise, natural answers (3-4 sentences) for each question,
 tailored to my resume and experience.
 Return them in the same numbered format.
 """
@@ -242,3 +242,23 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # cover_letter = generate_cover_letter(
+    #     """
+    #     Kontakt.io is a leading provider of smart building solutions, specializing in Bluetooth Low Energy (BLE) and IoT technologies. We help businesses optimize their operations, enhance safety, and improve user experiences through innovative location-based services and asset tracking solutions. Our products are used across various industries, including healthcare, manufacturing, logistics, and retail, to create smarter, more connected environments.
+
+    #    """,
+    #     "Kontakt.io",
+    #     "Software Engineer",
+    # )
+    # print(cover_letter)
+
+    # answers = generate_batch_ai_answers(
+    #     """
+
+    #     Wirechunk is a website platform and CMS where AI runs through every layer. It’s fast, modern, and extensible, letting developers build any site or app. We’re building the platform for the next 100 million sites.
+
+    #                           """,
+    #     ["What interests you about working for this company?"],
+    # )
+    # print(list(answers.values())[0])
