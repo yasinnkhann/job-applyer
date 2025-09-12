@@ -209,7 +209,6 @@ def main():
     for row in jobs_data:
         job_description = row.get("Job Description", "")
         company = row.get("Company", "")
-        print("Company:", company)
         questions = row.get("Questions", [])
 
         if questions:
