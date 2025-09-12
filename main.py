@@ -6,6 +6,7 @@ import PyPDF2
 from reportlab.lib.pagesizes import LETTER
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+from datetime import datetime
 
 # -------------------- Load Environment --------------------
 load_dotenv()
@@ -103,24 +104,25 @@ Return them in the same numbered format.
 # -------------------- Cover Letter Generator --------------------
 def generate_cover_letter(job_description: str, company: str, job_title: str):
     prompt = f"""
-Here is my profile and resume:
-- Name: {APPLICANT['name']}
-- LinkedIn: {APPLICANT.get('linkedin', '')}
-- GitHub: {APPLICANT.get('github', '')}
-- Portfolio: {APPLICANT.get('portfolio', '')}
+Write a full professional cover letter in the following format:
 
-Resume Content:
+Dear {company} Hiring Team,
+
+Write a tailored cover letter for the position of {job_title} at {company} using my experience and resume below. Include:
+
+- Why I am excited about this company and role.
+- Specific projects and achievements with measurable results.
+- Relevant skills and technologies (Python, React, Node.js, PostgreSQL, MongoDB, AWS, Docker, testing frameworks, etc.).
+- Natural, professional, human tone, not generic or robotic.
+- Conclude with a thank-you paragraph and professional closing.
+
+Resume content:
 {RESUME_TEXT}
 
-Now, write a concise, professional cover letter tailored for:
-- Company: {company}
-- Role: {job_title}
-- Job Description: {job_description}
+Job description:
+{job_description}
 
-Guidelines:
-- Max one page.
-- Natural tone, not too formal or robotic.
-- Highlight relevant skills and alignment with the role.
+Cover letter:
 """
     response = gmodel.generate_content(prompt)
     return response.text.strip()
