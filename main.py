@@ -55,8 +55,13 @@ RESUME_TEXT = extract_resume_text(APPLICANT["resume_path"])
 
 
 # -------------------- AI Answer Generator --------------------
-def generate_batch_ai_answers(job_description: str, questions: list):
+def generate_batch_ai_answers(job_description: str, questions: list, company: str):
+    """
+    Generates AI answers for a list of application questions,
+    tailored to the applicant's resume and the specific company.
+    """
     question_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(questions)])
+
     prompt = f"""
 Here is my profile and resume:
 - Name: {APPLICANT['name']}
@@ -72,11 +77,14 @@ Resume Content:
 Job description:
 {job_description}
 
+Company: {company}
+
 Application questions:
 {question_text}
 
-Draft concise, natural answers (3-4 sentences) for each question,
-tailored to my resume and experience.
+Draft concise, natural answers (3-4 sentences each) for each question,
+tailored to my resume, experience, and the specific company.
+Make the answers reflect why I am interested in this company and position.
 Return them in the same numbered format.
 """
     response = gmodel.generate_content(prompt)
@@ -200,10 +208,14 @@ def main():
 
     for row in jobs_data:
         job_description = row.get("Job Description", "")
+        company = row.get("Company", "")
+        print("Company:", company)
         questions = row.get("Questions", [])
 
         if questions:
-            answers_dict = generate_batch_ai_answers(job_description, questions)
+            answers_dict = generate_batch_ai_answers(
+                job_description, questions, company
+            )
             qa_pairs = [
                 {"question": q, "answer": answers_dict.get(i, "")}
                 for i, q in enumerate(questions)
@@ -245,11 +257,10 @@ if __name__ == "__main__":
 
     # cover_letter = generate_cover_letter(
     #     """
-    #     Kontakt.io is a leading provider of smart building solutions, specializing in Bluetooth Low Energy (BLE) and IoT technologies. We help businesses optimize their operations, enhance safety, and improve user experiences through innovative location-based services and asset tracking solutions. Our products are used across various industries, including healthcare, manufacturing, logistics, and retail, to create smarter, more connected environments.
 
     #    """,
-    #     "Kontakt.io",
-    #     "Software Engineer",
+    #     "Code for America",
+    #     "Principal Software Engineer",
     # )
     # print(cover_letter)
 
@@ -260,5 +271,6 @@ if __name__ == "__main__":
 
     #                           """,
     #     ["What interests you about working for this company?"],
+    #     "Wirechunk",
     # )
     # print(list(answers.values())[0])
