@@ -3,8 +3,9 @@ import csv
 from dotenv import load_dotenv
 import google.generativeai as genai
 import PyPDF2
-from docx import Document
-
+from reportlab.lib.pagesizes import LETTER
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
 
 # -------------------- Load Environment --------------------
 load_dotenv()
@@ -128,18 +129,30 @@ Guidelines:
     return response.text.strip()
 
 
-# -------------------- Save Cover Letter as DOCX --------------------
-def save_cover_letter_docx(company: str, job_title: str, cover_letter: str):
+# -------------------- Save Cover Letter as PDF (ReportLab) --------------------
+def save_cover_letter_pdf_reportlab(company: str, job_title: str, cover_letter: str):
     if not os.path.exists(COVER_LETTERS_DIR):
         os.makedirs(COVER_LETTERS_DIR)
 
-    filename = f"{company}_{job_title}_CoverLetter.docx".replace(" ", "_")
+    filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
     filepath = os.path.join(COVER_LETTERS_DIR, filename)
 
-    doc = Document()
-    doc.add_paragraph(cover_letter)
-    doc.save(filepath)
-    print(f"📄 Saved cover letter: {filepath}")
+    c = canvas.Canvas(filepath, pagesize=LETTER)
+    width, height = LETTER
+    margin = 0.75 * inch
+    textobject = c.beginText()
+    textobject.setTextOrigin(margin, height - margin)
+    textobject.setFont("Helvetica", 12)
+
+    # Add the cover letter text
+    for line in cover_letter.split("\n"):
+        textobject.textLine(line)
+
+    c.drawText(textobject)
+    c.showPage()
+    c.save()
+
+    print(f"📄 Saved cover letter PDF: {filepath}")
 
 
 # -------------------- CSV Output --------------------
@@ -181,7 +194,7 @@ def main():
                 job_description, row.get("Company", ""), row.get("Job Title", "")
             )
 
-            save_cover_letter_docx(
+            save_cover_letter_pdf_reportlab(
                 row.get("Company", ""), row.get("Job Title", ""), cover_letter
             )
 
@@ -197,7 +210,7 @@ def main():
 
     write_answers_to_csv(jobs, OUTPUT_CSV)
     print(f"\n✅ AI-generated answers saved to {OUTPUT_CSV}")
-    print(f"✅ Individual cover letters saved in folder: {COVER_LETTERS_DIR}")
+    print(f"✅ Individual cover letters saved as PDFs in folder: {COVER_LETTERS_DIR}")
 
 
 if __name__ == "__main__":
