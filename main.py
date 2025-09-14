@@ -3,10 +3,9 @@ import json
 from dotenv import load_dotenv
 import google.generativeai as genai
 import PyPDF2
-from datetime import datetime
-from reportlab.lib.pagesizes import LETTER
-from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.units import inch
 
 # -------------------- Load Environment --------------------
@@ -93,7 +92,6 @@ No dashes.
     response = gmodel.generate_content(prompt)
     output = response.text.strip()
 
-    # Build dictionary of answers
     answers = {}
     current_idx = None
     buffer = []
@@ -143,10 +141,6 @@ Write the final cover letter directly, starting with:
 
 # -------------------- PDF Helpers --------------------
 def save_paragraph_pdf(filepath, title, paragraphs):
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.pagesizes import LETTER
-    from reportlab.lib.units import inch
 
     doc = SimpleDocTemplate(
         filepath,
@@ -205,7 +199,6 @@ def save_qa_pdf(company: str, job_title: str, qa_pairs: list):
 def main():
     all_jobs = []
 
-    # Load jobs from JSON
     with open(JOB_LIST_JSON, "r", encoding="utf-8") as f:
         jobs_data = json.load(f)
 
@@ -255,58 +248,22 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
 
     # cover_letter = generate_cover_letter(
     #     """
 
     #    """,
     #     "Code for America",
-    #     "Principal Software Engineer",
+    #     "Staff Software Engineer - SRE, Backend (Reliability Engineering)",
     # )
     # print(cover_letter)
 
-    answers = generate_batch_ai_answers(
-        """
-          Mission
+    # answers = generate_batch_ai_answers(
+    #     """
 
-Finch was started by 2 friends (Nino & Steph 🙇🏾‍♂️🙇🏻‍♀️) who struggled with anxiety and depression and found self-care challenging to stick with. We decided to build Finch hoping to make self-care fun and accessible after seeing many others share similar struggles. Finch was launched in 2021, and our team is grateful to have helped over 20 million people on their mental health journeys.
-
-Finch is profitable and we believe in responsible growth. We are a small but mighty team who are passionate about mental health.
-
-Role Summary
-
-Finch has unique product engineering opportunities as it straddles the line between wellness and gaming, and our product challenges reflect that. We’re passionate about making self-care feel easy and fun for everyone, and strive to design playful, delightful experiences we hope users will love. If those sorts of creative challenges are interesting to you, read on!
-
-Key Responsibilities
-
-You will play a critical role in growing and evolving our app as our 5th engineer.
-You will work with high autonomy and speed, and be involved in the end-to-end product development cycle from ideation to launch decisions.
-You will have significant input into the norms and tools we use in order to create a high performing engineering team.
-You will work cross-functionally with product designers, creative designers, character animators, and the founders.
-You will be a thought partner in building a product, company, and culture we are proud of.
-Projects You Could Work On
-
-How can we revolutionize the way people interact with their mobile devices to be mentally beneficial instead of mentally degrading?
-How can we redefine social interactions that can help people support others in a way that no other product can?
-How can we reimagine wellness exercises like CBT, mental health insights, and more to help people navigate the ups and downs in their lives?
-How can we create playful product experiences that can make daily self care and mental health fun and sustainably engaging?
-How can we create a generalizable platform of mental health tools that can cater to a wide range of experiences, from people still figuring out their self care routines to others who know exactly what they need to do?
-Requirements
-
-You have 5+ years experience building consumer products for mobile or full-stack environments.
-You have a product-centric mindset and take pride in building experiences people love to use. You naturally identify tradeoffs for any product decision to inform opinions about user experience.
-You can quickly derisk new ideas ranging from quick iterative changes to developing completely new product experiences. You move with a strong sense of urgency and can-do attitude in a fast-paced environment.
-You have experience designing clean and maintainable APIs.
-You’ve run many A/B experiments and can make data-informed decisions while balancing qualitative feedback.
-You are familiar with best practices in engineering for mobile apps and web and can help build scalable and reliable products.
-You enjoy disentangling ambiguous and messy problems into simple and elegant solutions.
-You can work at least 6 hours within our coordination hours (8am PST - 6pm PST)
-Nice to haves: Experience developing Flutter mobile apps. Experience working on products in the wellness or game industry.
-
-
-                              """,
-        ["What interests you about working for this company?"],
-        "Finch Care",
-    )
-    print(list(answers.values())[0])
+    #                           """,
+    #     ["What interests you about working for this company?"],
+    #     "Finch Care",
+    # )
+    # print(list(answers.values())[0])
