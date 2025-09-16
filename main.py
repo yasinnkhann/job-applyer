@@ -125,7 +125,6 @@ The cover letter must:
 - Explain why the applicant is excited about this company and role.
 - Include relevant technical skills (Python, React, Node.js, PostgreSQL, MongoDB, AWS, Docker, testing frameworks, etc.).
 - Be concise, tailored to the applicant's experience, and ready to send.
-
 Resume content:
 {RESUME_TEXT}
 
@@ -136,7 +135,23 @@ Write the final cover letter directly, starting with:
 "Dear {company} Hiring Team," and ending with a professional closing including the applicant's name.
 """
     response = gmodel.generate_content(prompt)
-    return response.text.strip()
+    cover_letter_content = response.text.strip()
+
+    save_cover_letter_pdf(company, job_title, cover_letter_content)
+
+    return cover_letter_content
+
+
+# -------------------- Save Cover Letter PDF --------------------
+def save_cover_letter_pdf(company: str, job_title: str, cover_letter: str):
+    if not os.path.exists(COVER_LETTER_PDFS_DIR):
+        os.makedirs(COVER_LETTER_PDFS_DIR)
+
+    filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
+    filepath = os.path.join(COVER_LETTER_PDFS_DIR, filename)
+    paragraphs = cover_letter.split("\n\n")  # Split into paragraphs
+    save_paragraph_pdf(filepath, f"Cover Letter: {company} - {job_title}", paragraphs)
+    print(f"📄 Saved cover letter PDF: {filepath}")
 
 
 # -------------------- PDF Helpers --------------------
@@ -163,18 +178,6 @@ def save_paragraph_pdf(filepath, title, paragraphs):
         story.append(Spacer(1, 0.15 * inch))
 
     doc.build(story)
-
-
-# -------------------- Save Cover Letter PDF --------------------
-def save_cover_letter_pdf(company: str, job_title: str, cover_letter: str):
-    if not os.path.exists(COVER_LETTER_PDFS_DIR):
-        os.makedirs(COVER_LETTER_PDFS_DIR)
-
-    filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
-    filepath = os.path.join(COVER_LETTER_PDFS_DIR, filename)
-    paragraphs = cover_letter.split("\n\n")  # Split into paragraphs
-    save_paragraph_pdf(filepath, f"Cover Letter: {company} - {job_title}", paragraphs)
-    print(f"📄 Saved cover letter PDF: {filepath}")
 
 
 # -------------------- Save Q&A PDF --------------------
@@ -217,9 +220,8 @@ def main():
                 for i, q in enumerate(questions)
             ]
 
-        cover_letter = generate_cover_letter(job_description, company, title)
+        cover_letter_content = generate_cover_letter(job_description, company, title)
 
-        save_cover_letter_pdf(company, title, cover_letter)
         if qa_pairs:
             save_qa_pdf(company, title, qa_pairs)
 
@@ -229,7 +231,7 @@ def main():
                 "Job Title": title,
                 "Job URL": job_url,
                 "Questions": qa_pairs,
-                "CoverLetter": cover_letter,
+                "CoverLetter": cover_letter_content,
             }
         )
 
@@ -243,22 +245,22 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
 
-    # cover_letter = generate_cover_letter(
-    #     """
+    generate_cover_letter(
+        """
+CLICS is a beauty tech company located in San Diego, CA and has invented the industry’s first hair color digital studio that completely optimizes the way salons formulate, dispense, and manage hair color. With an innovative mobile app and computer-controlled platform, CLICS allows hair colorists to create any shade of demi or permanent color with the touch of a button. CLICS is a leader in industry-first beauty salon automation technologies and proud to be an equal opportunity employer.
+       """,
+        "CLICS",
+        "Senior Software Engineer",
+    )
 
-    #    """,
-    #     "Code for America",
-    #     "Staff Software Engineer - SRE, Backend (Reliability Engineering)",
-    # )
-    # print(cover_letter)
 
-    # answers = generate_batch_ai_answers(
-    #     """
+# answers = generate_batch_ai_answers(
+#     """
 
-    #                           """,
-    #     ["What interests you about working for this company?"],
-    #     "Finch Care",
-    # )
-    # print(list(answers.values())[0])
+#                           """,
+#     ["What interests you about working for this company?"],
+#     "Finch Care",
+# )
+# print(list(answers.values())[0])
