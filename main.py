@@ -144,13 +144,20 @@ Write the final cover letter directly, starting with:
 
 # -------------------- Save Cover Letter PDF --------------------
 def save_cover_letter_pdf(company: str, job_title: str, cover_letter: str):
+    # Ensure the output folder exists
     if not os.path.exists(COVER_LETTER_PDFS_DIR):
         os.makedirs(COVER_LETTER_PDFS_DIR)
 
+    # File name includes company and job title (kept for organization)
     filename = f"{company}_{job_title}_CoverLetter.pdf".replace(" ", "_")
     filepath = os.path.join(COVER_LETTER_PDFS_DIR, filename)
-    paragraphs = cover_letter.split("\n\n")  # Split into paragraphs
-    save_paragraph_pdf(filepath, f"Cover Letter: {company} - {job_title}", paragraphs)
+
+    # Split cover letter into paragraphs
+    paragraphs = cover_letter.split("\n\n")
+
+    # Pass empty string for title to avoid the bold heading in the PDF
+    save_paragraph_pdf(filepath, "", paragraphs)
+
     print(f"📄 Saved cover letter PDF: {filepath}")
 
 
@@ -185,6 +192,7 @@ def save_qa_pdf(company: str, job_title: str, qa_pairs: list):
     if not os.path.exists(QA_PDFS_DIR):
         os.makedirs(QA_PDFS_DIR)
 
+    # Keep the filename descriptive
     filename = f"{company}_{job_title}_QA.pdf".replace(" ", "_")
     filepath = os.path.join(QA_PDFS_DIR, filename)
 
@@ -194,7 +202,9 @@ def save_qa_pdf(company: str, job_title: str, qa_pairs: list):
         paragraphs.append(f"<b>A:</b> {qa['answer']}")
         paragraphs.append("")  # extra spacing
 
-    save_paragraph_pdf(filepath, f"Q&A: {company} - {job_title}", paragraphs)
+    # Pass empty string for title to avoid bold heading
+    save_paragraph_pdf(filepath, "", paragraphs)
+
     print(f"📄 Saved Q&A PDF: {filepath}")
 
 
@@ -245,15 +255,15 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
 
-    generate_cover_letter(
-        """
-CLICS is a beauty tech company located in San Diego, CA and has invented the industry’s first hair color digital studio that completely optimizes the way salons formulate, dispense, and manage hair color. With an innovative mobile app and computer-controlled platform, CLICS allows hair colorists to create any shade of demi or permanent color with the touch of a button. CLICS is a leader in industry-first beauty salon automation technologies and proud to be an equal opportunity employer.
-       """,
-        "CLICS",
-        "Senior Software Engineer",
-    )
+#     generate_cover_letter(
+#         """
+# CLICS is a beauty tech company located in San Diego, CA and has invented the industry’s first hair color digital studio that completely optimizes the way salons formulate, dispense, and manage hair color. With an innovative mobile app and computer-controlled platform, CLICS allows hair colorists to create any shade of demi or permanent color with the touch of a button. CLICS is a leader in industry-first beauty salon automation technologies and proud to be an equal opportunity employer.
+#        """,
+#         "CLICS",
+#         "Senior Software Engineer",
+#     )
 
 
 # answers = generate_batch_ai_answers(
