@@ -257,20 +257,22 @@ def main():
 if __name__ == "__main__":
     main()
 
-#     generate_cover_letter(
-#         """
-# CLICS is a beauty tech company located in San Diego, CA and has invented the industry’s first hair color digital studio that completely optimizes the way salons formulate, dispense, and manage hair color. With an innovative mobile app and computer-controlled platform, CLICS allows hair colorists to create any shade of demi or permanent color with the touch of a button. CLICS is a leader in industry-first beauty salon automation technologies and proud to be an equal opportunity employer.
-#        """,
-#         "CLICS",
-#         "Senior Software Engineer",
-#     )
+    # generate_cover_letter(
+    #     """
+    # CLICS is a beauty tech company located in San Diego, CA and has invented the industry’s first hair color digital studio that completely optimizes the way salons formulate, dispense, and manage hair color. With an innovative mobile app and computer-controlled platform, CLICS allows hair colorists to create any shade of demi or permanent color with the touch of a button. CLICS is a leader in industry-first beauty salon automation technologies and proud to be an equal opportunity employer.
+    #         """,
+    #     "CLICS",
+    #     "Senior Software Engineer",
+    # )
 
+    # answers = generate_batch_ai_answers(
+    #     """
+    #     job description: Finch Care is seeking a passionate and skilled Senior Software Engineer to join our dynamic team. As a key member of our engineering department, you will play a crucial role in designing, developing, and maintaining our cutting-edge healthcare platform. You will collaborate with cross-functional teams to deliver high-quality software solutions that enhance patient care and streamline healthcare operations.
 
-# answers = generate_batch_ai_answers(
-#     """
+    #                         """,
+    #     ["What interests you about working for this company?"],
+    #     "Finch Care",
+    # )
+    # print(list(answers.values())[0])
 
-#                           """,
-#     ["What interests you about working for this company?"],
-#     "Finch Care",
-# )
-# print(list(answers.values())[0])
+    print("Done ✅")
