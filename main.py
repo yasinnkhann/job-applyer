@@ -203,36 +203,31 @@ def main():
         jobs_data = json.load(f)
 
     for row in jobs_data:
-        job_description = row.get("Job Description", "")
         company = row.get("Company", "")
+        title = row.get("Job Title", "")
+        job_url = row.get("Job URL", "")
+        job_description = row.get("Job Description", "")
         questions = row.get("Questions", [])
 
+        qa_pairs = []
         if questions:
-            answers_dict = generate_batch_ai_answers(
-                job_description, questions, company
-            )
+            answers = generate_batch_ai_answers(job_description, questions, company)
             qa_pairs = [
-                {"question": q, "answer": answers_dict.get(i, "")}
+                {"question": q, "answer": answers.get(i, "")}
                 for i, q in enumerate(questions)
             ]
-        else:
-            qa_pairs = []
 
-        cover_letter = generate_cover_letter(
-            job_description, row.get("Company", ""), row.get("Job Title", "")
-        )
+        cover_letter = generate_cover_letter(job_description, company, title)
 
-        save_cover_letter_pdf(
-            row.get("Company", ""), row.get("Job Title", ""), cover_letter
-        )
+        save_cover_letter_pdf(company, title, cover_letter)
         if qa_pairs:
-            save_qa_pdf(row.get("Company", ""), row.get("Job Title", ""), qa_pairs)
+            save_qa_pdf(company, title, qa_pairs)
 
         all_jobs.append(
             {
-                "Company": row.get("Company", ""),
-                "Job Title": row.get("Job Title", ""),
-                "Job URL": row.get("Job URL", ""),
+                "Company": company,
+                "Job Title": title,
+                "Job URL": job_url,
                 "Questions": qa_pairs,
                 "CoverLetter": cover_letter,
             }
