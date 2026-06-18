@@ -1,4 +1,5 @@
 import os
+from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -50,5 +51,5 @@ def launch_gemini_ai():
         print("Gemini API test failed:", e)
 
 
-# launch_open_ai()
+launch_open_ai()
 launch_gemini_ai()
