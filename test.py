@@ -83,7 +83,46 @@ def launch_groq():
         print("Groq API test failed:", e)
 
 
+def launch_openrouter():
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not openrouter_api_key:
+        print("OPENROUTER_API_KEY not found in environment.")
+        return
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=openrouter_api_key,
+    )
+
+    free_models = [
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "google/gemma-4-31b-it:free",
+        "liquid/lfm-2.5-1.2b-instruct:free",
+        "qwen/qwen3-coder:free",
+        "poolside/laguna-xs.2:free",
+    ]
+
+    for model_name in free_models:
+        try:
+            print(f"Trying OpenRouter model: {model_name}...")
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Explain the concept of quantum computing.",
+                    }
+                ],
+            )
+            print("OpenRouter response:", completion.choices[0].message.content)
+            return  # Success, exit the function
+        except Exception as e:
+            print(f"Model {model_name} failed: {e}\n")
+
+    print("All free OpenRouter models failed.")
+
+
 # launch_open_ai()
 # launch_gemini_ai()
 # launch_ollama()
-launch_groq()
+# launch_groq()
+launch_openrouter()
