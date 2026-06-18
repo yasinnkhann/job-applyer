@@ -1,5 +1,4 @@
 import os
-from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -43,9 +42,9 @@ def launch_gemini_ai():
         return
 
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
     try:
-        response = model.generate_content("How do you Alex likes men in spanish")
+        response = model.generate_content("How do you say 'Alex likes men' in Spanish?")
         print("Gemini response:", response.text)
     except Exception as e:
         print("Gemini API test failed:", e)

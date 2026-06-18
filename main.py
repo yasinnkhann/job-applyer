@@ -16,7 +16,7 @@ if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found in environment.")
 
 genai.configure(api_key=GEMINI_API_KEY)
-gmodel = genai.GenerativeModel("gemini-2.0-flash")
+gmodel = genai.GenerativeModel("gemini-3.1-flash-lite")
 
 # -------------------- Applicant Info --------------------
 APPLICANT = {
