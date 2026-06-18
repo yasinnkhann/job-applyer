@@ -3,6 +3,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
 import ollama
+from groq import Groq
 
 load_dotenv()
 
@@ -61,6 +62,28 @@ def launch_ollama():
         print("Ollama API test failed:", e)
 
 
+def launch_groq():
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        print("GROQ_API_KEY not found in environment.")
+        return
+    client = Groq(api_key=groq_api_key)
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Where do babies come from?",
+                }
+            ],
+            model="llama-3.1-8b-instant",
+        )
+        print("Groq response:", chat_completion.choices[0].message.content)
+    except Exception as e:
+        print("Groq API test failed:", e)
+
+
 # launch_open_ai()
 # launch_gemini_ai()
-launch_ollama()
+# launch_ollama()
+launch_groq()
