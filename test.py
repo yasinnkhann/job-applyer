@@ -2,6 +2,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 import google.generativeai as genai
+import ollama
 
 load_dotenv()
 
@@ -16,20 +17,13 @@ def launch_open_ai():
             print(
                 "OpenAI API key is valid. Number of models available:", len(models.data)
             )
-            # Test a language model response with gpt-4o
             response = open_client.chat.completions.create(
                 model="gpt-5",
                 messages=[{"role": "user", "content": "Say hello!"}],
                 max_tokens=50,
                 temperature=0.7,
             )
-            print("gpt-4o response:", response.choices[0].message.content.strip())
-
-            # response = open_client.responses.create(
-            #     model="gpt-5",
-            #     input="Write a one-sentence bedtime story about a unicorn.",
-            # )
-            # print("response:", response)
+            print("response:", response.choices[0].message.content.strip())
         except Exception as e:
             print("OpenAI API key test failed:", e)
     else:
@@ -51,5 +45,22 @@ def launch_gemini_ai():
         print("Gemini API test failed:", e)
 
 
-launch_open_ai()
-launch_gemini_ai()
+def launch_ollama():
+    try:
+        response = ollama.chat(
+            model="llama3",
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Tell me a joke.",
+                },
+            ],
+        )
+        print("Ollama response:", response["message"]["content"])
+    except Exception as e:
+        print("Ollama API test failed:", e)
+
+
+# launch_open_ai()
+# launch_gemini_ai()
+launch_ollama()
