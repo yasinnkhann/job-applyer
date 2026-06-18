@@ -121,8 +121,8 @@ def launch_openrouter():
     print("All free OpenRouter models failed.")
 
 
+# launch_openrouter()
 # launch_open_ai()
 # launch_gemini_ai()
 # launch_ollama()
-# launch_groq()
-launch_openrouter()
+launch_groq()
